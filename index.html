@@ -157,7 +157,13 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid #2E2740
 .sr-name{font-size:15px;font-weight:600}
 .sr-log{height:40px;min-width:72px;padding:0 12px;border-radius:20px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:14px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s,color .2s}
 .sr-log.ok{background:var(--accent);color:var(--accent-ink);animation:cpop .4s cubic-bezier(.2,1.6,.4,1)}
-.loghead{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--soft);padding:16px 0 6px;border-bottom:1px solid var(--line)}
+.loghead{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);padding:24px 0 8px;border-bottom:1px solid var(--line)}
+.loghead span:first-child{font-size:15px;font-weight:600;color:var(--text)}
+.lrow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border:none;border-bottom:1px solid var(--line);background:none;color:var(--text);text-align:left;min-height:52px}
+.lname{flex:1;min-width:0;font-size:14px;font-weight:500}
+.lchips{display:flex;gap:4px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex-shrink:0;max-width:55%}
+.lchip{min-width:28px;height:24px;padding:0 7px;border-radius:12px;background:#2A2436;color:var(--soft);font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.lkg{font-size:12px;color:var(--muted);margin-left:4px;white-space:nowrap}
 .logrow{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logrow .lt{color:var(--muted);font-variant-numeric:tabular-nums;grid-row:span 2}
 .logrow .ln{color:var(--text);font-weight:500}
@@ -291,7 +297,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.6';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -1009,22 +1015,25 @@ function viewDetail(W){
   return h;
 }
 
+function logChips(ls){
+  const e = E[ls[0].ex]; const loads = [...new Set(ls.map(l => l.load||0))];
+  const txt = l => e.k === 'time' || e.k === 'fail' ? fmtSecs(l.secs||0) : e.k === 'dist' ? '✓' : String(l.reps||0)+(loads.length > 1 && l.load ? '·'+(Math.round(l.load*10)/10) : '');
+  return '<span class="lchips">'+ls.map(l => '<span class="lchip">'+txt(l)+'</span>').join('')+(loads.length === 1 && loads[0] ? '<span class="lkg">'+kg(loads[0])+'</span>' : loads.length > 1 ? '<span class="lkg">kg</span>' : '')+'</span>';
+}
+function dayTitle(d){ const x = new Date(d+'T12:00:00'); const y = new Date(); y.setDate(y.getDate()-1);
+  return d === dkey(new Date()) ? 'Today' : d === dkey(y) ? 'Yesterday' : DAYFULL[(x.getDay()+6)%7]+' '+x.getDate()+' '+MON[x.getMonth()]+(x.getFullYear() !== new Date().getFullYear() ? ' '+x.getFullYear() : ''); }
 function viewLog(){
   if (!logs.length) return '<p class="muted" style="font-size:14px;margin-top:20px">No sets logged yet.</p>';
-  const all = logs.slice().sort((a,b) => b.ts - a.ts);
-  const shown = all.slice(0, st.logLimit);
-  let h = '<p class="small muted" style="margin:14px 0 4px">'+all.length+' sets in total, newest first.</p>';
-  let cur = null;
-  shown.forEach(l => {
-    if (l.date !== cur) {
-      cur = l.date; const d = new Date(l.date+'T12:00:00'); const n = all.filter(z => z.date === l.date).length;
-      h += '<div class="loghead"><span>'+DAYN[(d.getDay()+6)%7]+' '+d.getDate()+' '+MON[d.getMonth()]+(d.getFullYear() !== new Date().getFullYear() ? ' '+d.getFullYear() : '')+'</span><span>'+n+' set'+(n>1?'s':'')+'</span></div>';
-    }
-    const t = new Date(l.ts); const e = E[l.ex];
-    const bits = [describe(l)]; if (l.side && e.s && l.side !== 'Both') bits.push(l.side.toLowerCase()); if (l.effort) bits.push('effort '+l.effort);
-    h += '<div class="logrow"><span class="lt">'+pad(t.getHours())+':'+pad(t.getMinutes())+'</span><span class="ln">'+esc(e.n)+'</span><span class="ld">'+esc(bits.join(' · '))+'</span></div>';
+  const days = [...new Set(logs.map(l => l.date))].sort().reverse();
+  const nDays = Math.max(1, Math.round(st.logLimit / 20));
+  let h = '';
+  days.slice(0, nDays).forEach(d => {
+    const ls = logs.filter(l => l.date === d).sort((a,b) => a.ts - b.ts); const by = {}; ls.forEach(l => (by[l.ex] = by[l.ex] || []).push(l));
+    const ids = Object.keys(by).filter(id => E[id]);
+    h += '<div class="loghead"><span>'+dayTitle(d)+'</span><span>'+ids.length+' exercise'+(ids.length>1?'s':'')+' · '+ls.length+' set'+(ls.length>1?'s':'')+'</span></div>';
+    h += ids.map(id => '<button class="lrow" data-a="open" data-v="'+id+'"><span style="width:26px;display:flex;flex-shrink:0">'+icon(id,26)+'</span><span class="lname">'+esc(E[id].n)+'</span>'+logChips(by[id])+'</button>').join('');
   });
-  if (all.length > shown.length) h += '<button class="linkbtn" data-a="log-more">Show '+Math.min(200, all.length - shown.length)+' more</button>';
+  if (days.length > nDays) h += '<button class="linkbtn" data-a="log-more">Show earlier days</button>';
   return h;
 }
 
