@@ -144,7 +144,7 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid #2A2E35
 .swapopt{display:flex;gap:12px;align-items:center;width:100%;padding:12px 0;border:none;border-bottom:1px solid var(--line);background:none;color:var(--text)}
 .xr.swapin{animation:swapin .45s cubic-bezier(.2,1.2,.4,1)}
 @keyframes swapin{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
-.tsearch{display:flex;align-items:center;gap:10px;margin-top:10px;height:44px;padding:0 6px 0 14px;border-radius:12px;background:var(--card)}
+.tsearch{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:42px;padding:0 6px 0 14px;border-radius:12px;background:var(--card)}
 .tsearch input{flex:1;min-width:0;height:42px;border:none;background:transparent;color:var(--text);font-size:16px;outline:none;-webkit-appearance:none}
 .tsearch input::-webkit-search-cancel-button{display:none}
 .tsearch:focus-within{box-shadow:0 0 0 2px var(--accent)}
@@ -550,12 +550,12 @@ function viewToday(W){
   const match = x => (!st.prot || x.tags.indexOf(st.prot)!==-1) && (st.equip==='All' || x.equip===st.equip) && (st.area==='All' || x.area===st.area);
   h += '<div class="section" style="display:flex;gap:10px"><div class="seg" role="group" aria-label="Equipment">'+
     ['All','Home','Gym'].map(e => '<button class="'+(st.equip===e?'on':'')+'" aria-pressed="'+(st.equip===e)+'" data-a="equip" data-v="'+e+'">'+e+'</button>').join('')+'</div>'+
-    '<div class="selectwrap"><label for="area" class="hidden">Muscle area</label><select id="area" data-c="area"><option value="All">All muscle areas</option>'+
-    AREAS.map(a => '<option'+(st.area===a?' selected':'')+'>'+a+'</option>').join('')+'</select>'+chev+'</div></div>';
-  h += '<div class="tsearch"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9EA3AB" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
-    '<label for="tq" class="hidden">Find an exercise to log</label><input id="tq" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Find an exercise to log" value="'+esc(st.tq)+'">'+
-    (st.tq ? '<button class="tq-x" aria-label="Clear search" data-a="tq-clear">×</button>' : '')+'</div><div id="tres"></div>';
-  if (anyF) h += '<div class="row-between small" style="margin-top:8px"><span class="muted">'+esc([st.prot, st.equip!=='All'?st.equip:null, st.area!=='All'?st.area:null].filter(Boolean).join(' · '))+'</span><button class="linkbtn" style="padding:0;min-height:30px;font-size:13px" data-a="clear">Clear filters</button></div>';
+    '<div class="tsearch"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9EA3AB" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'+
+    '<label for="tq" class="hidden">Find an exercise to log</label><input id="tq" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Find an exercise" value="'+esc(st.tq)+'">'+
+    (st.tq ? '<button class="tq-x" aria-label="Clear search" data-a="tq-clear">×</button>' : '')+'</div></div>';
+
+  if (anyF) h += '<div class="row-between small" style="margin-top:8px"><span class="muted">'+esc([st.prot, st.equip!=='All'?st.equip:null, null].filter(Boolean).join(' · '))+'</span><button class="linkbtn" style="padding:0;min-height:30px;font-size:13px" data-a="clear">Clear filters</button></div>';
+  h += '<div id="tres"></div>';
 
   // Today's workout: sized to the time you have, spaced across the week, in warm-up → strength → mobility order
   const per = id => T[id].ideal.per || 1;
