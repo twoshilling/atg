@@ -112,8 +112,8 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid #2E2740
 .lc.on{background:var(--accent);color:var(--accent-ink)}
 .cc.add{border-style:dashed;color:var(--muted);font-size:20px;font-weight:400}
 .cc{position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.cc.holding{animation:holdshrink 1s linear forwards}
-.cc.holding::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid #F2A3A3;clip-path:inset(0 0 100% 0);animation:holdring 1s linear forwards}
+.cc.holding{animation:holdshrink .5s linear forwards}
+.cc.holding::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid #F2A3A3;clip-path:inset(0 0 100% 0);animation:holdring .5s linear forwards}
 @keyframes holdshrink{to{transform:scale(.86);background:#5A2B2B;border-color:#5A2B2B;color:#F2A3A3}}
 @keyframes holdring{to{clip-path:inset(0 0 0 0)}}
 .cc.vanish{animation:vanish .22s ease-in forwards}
@@ -291,7 +291,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.5.1';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -1398,7 +1398,7 @@ document.addEventListener('pointerdown', e => {
       if (st.rest && st.rest.logId === h.id) stopRest();
       render(); toast('Set deleted', {undoDelete:true});
     }, 220);
-  }, 1000);
+  }, 500);
 });
 function cancelHold(){ if (hold) { clearTimeout(hold.t); hold.c.classList.remove('holding'); hold = null; } }
 document.addEventListener('pointerup', cancelHold);
@@ -1438,7 +1438,7 @@ function renderDay(){
         '<div class="xmeta">'+ls.length+' set'+(ls.length>1?'s':'')+(ls.some(l => l.load) ? ' · up to '+kg(Math.max(...ls.map(l => l.load||0))) : '')+(ls.some(l => l.effort) ? ' · effort '+ls.filter(l=>l.effort).map(l=>l.effort).join(', ') : '')+'</div>'+
         '<div class="circles">'+ls.map((l,i) => '<button class="cc on'+(isShort(l)?' short':'')+'" aria-label="Set '+(i+1)+', '+esc(describe(l))+'. Tap to take one off, hold to delete" data-a="c-tap" data-v="'+l.id+'">'+circleLabel(id,l)+'</button>').join('')+'</div></div></div>';
     }).join('');
-    h += '<p class="small muted" style="margin:14px 0 0;line-height:1.5">Tap a set to take a rep off, or hold it for a second to delete it.</p>';
+    h += '<p class="small muted" style="margin:14px 0 0;line-height:1.5">Tap a set to take a rep off, or hold it to delete it.</p>';
   }
   h += '</div></div>';
   r.innerHTML = h;
