@@ -196,6 +196,9 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 .ico{width:44px;height:44px;border-radius:13px;background:var(--card);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico.sm{width:30px;height:30px;border-radius:9px}
 .ico.big{width:96px;height:96px;border-radius:26px}
+.afilt{display:flex;gap:6px;overflow-x:auto;margin:10px -20px 0;padding:2px 20px 4px;scrollbar-width:none}
+.afilt::-webkit-scrollbar{display:none}
+.afilt .lc{flex-shrink:0}
 /* v4 */
 .seg button.on,.effort button.on,.sides button.on,.lc.on,.ef.on{background:#F4EFF8;color:#120F18}
 .btn{background:#F4EFF8;color:#120F18}
@@ -249,7 +252,8 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 .mitem .ms{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .mitem .mr{font-size:14px;color:var(--muted)}
 .mitem.danger .mt{color:#F2A3A3}
-.sheet.tall{min-height:70vh}
+.sheet.tall{height:86vh}
+.sheet .sr-log{height:34px;min-width:60px;font-size:13px}
 .somethingelse{width:100%;display:flex;align-items:center;gap:12px;margin-top:14px;padding:14px;border-radius:16px;border:1.5px dashed #3A3249;background:none;color:var(--text)}
 .se-plus{width:38px;height:38px;border-radius:12px;background:#231E2E;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--soft)}
 .tinput{width:100%;height:48px;border-radius:12px;border:none;background:var(--card);color:var(--text);font-size:16px;padding:0 14px;outline:none}
@@ -287,7 +291,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -736,7 +740,7 @@ function viewToday(W){
     if (!flag('tip-circles')) h += '<div class="tip" style="margin:12px 0 4px"><span class="cc on" style="width:30px;height:30px;font-size:12px;flex-shrink:0" aria-hidden="true">8</span><span style="flex:1">Tap a circle to log a set. Tap a filled one to take a rep off, or hold it to delete. Tap ··· to swap, remove or change the weight.</span><button aria-label="Dismiss tip" data-a="tip-off">×</button></div>';
     h += curX.map(x => row(x, W)).join('');
     h += addBtn(n < 3 ? '+ Add one to make it 3' : '+ Add to today');
-    if (nextIds.length) h += '<div class="nextcard"><div><div style="font-size:14px;font-weight:600;color:var(--soft)">On a roll? '+nextIds.length+' more ready</div><div class="small muted" style="margin-top:2px">'+esc(nextIds.map(id => E[id].n).join(', '))+' · ~'+nextMin+' min</div></div></div>';
+    if (false) h += '<div class="nextcard"><div><div style="font-size:14px;font-weight:600;color:var(--soft)">On a roll? '+nextIds.length+' more ready</div><div class="small muted" style="margin-top:2px">'+esc(nextIds.map(id => E[id].n).join(', '))+' · ~'+nextMin+' min</div></div></div>';
   }
   h += '</div>';
 
@@ -828,28 +832,39 @@ function undoRemove(){
 }
 
 // ---------- Add to today, and custom exercises ----------
-function openAdd(){ st.add = {q:'', view:'list', err:'', f:{n:'', k:'reps', sets:3, r:10, t:30, s:false, l:false, q:st.equip === 'Gym' ? 'Gym' : 'Home', prot:null}}; renderAdd(); }
+function openAdd(){ st.add = {q:'', view:'list', err:'', area:'All', eq:st.equip, f:{n:'', k:'reps', sets:3, r:10, t:30, s:false, l:false, q:st.equip === 'Gym' ? 'Gym' : 'Home', prot:null}}; renderAdd(); }
 function closeAdd(){ st.add = null; document.getElementById('add-root').innerHTML = ''; }
+function curBatchSet(){ const W = computeWeek(); const ds = dayState(W.today); const ids = st.up ? st.up.ids : []; const ch = batchesOf(ids); const b = Math.min(ds.batch, ch.length);
+  return new Set((ch[b] || []).concat(ds.added).filter(id => !(ds.ended))); }
+function addMatch(id){ const a = st.add; return (a.eq === 'All' || E[id].q === a.eq) && (a.area === 'All' || E[id].a === a.area); }
 function addCandidates(W){
-  const ds = dayState(W.today); const busy = new Set((st.up ? st.up.ids : []).concat(ds.added));
-  return W.ex.filter(x => !x.optional && x.left > 0 && !busy.has(x.id) && !(W.tdy[x.id] > 0) && (st.equip === 'All' || x.equip === st.equip))
+  const busy = curBatchSet();
+  return W.ex.filter(x => !x.optional && x.left > 0 && !busy.has(x.id) && !(W.tdy[x.id] > 0) && addMatch(x.id))
     .sort((a,b) => (prioOf(b.id) - prioOf(a.id)) || (b.left/b.target - a.left/a.target) || ((b.since===null?99:b.since) - (a.since===null?99:a.since)));
 }
 function addRow(id, W){
   const x = W.ex.find(z => z.id === id) || computeOne(id, W);
-  return '<div class="sr"><span class="ico">'+icon(id,34)+'</span><span class="sr-main" style="cursor:default"><span class="sr-name">'+esc(E[id].n)+'</span><span class="xmeta">'+esc(T[id].ideal.rx)+(x.optional ? ' · optional' : ' · '+x.left+' left this week')+'</span></span><button class="sr-log" data-a="add-pick" data-v="'+id+'">Add</button></div>';
+  return '<div class="sr"><span class="ico">'+icon(id,34)+'</span><span class="sr-main" style="cursor:default"><span class="sr-name">'+esc(E[id].n)+'</span><span class="xmeta">'+esc(T[id].ideal.rx)+(x.optional ? ' · optional' : x.left ? ' · '+x.left+' left' : ' · done this week')+'</span></span><button class="sr-log" data-a="add-pick" data-v="'+id+'">Add</button></div>';
 }
 function renderAddList(){
   const box = document.getElementById('ares'); if (!box || !st.add) return;
-  const W = computeWeek(); const q = st.add.q.trim().toLowerCase(); const terms = q.split(/\s+/).filter(Boolean);
+  const W = computeWeek(); const a = st.add; const q = a.q.trim().toLowerCase(); const terms = q.split(/\s+/).filter(Boolean);
+  const busy = curBatchSet();
+  const where = [a.area !== 'All' ? a.area : '', a.eq !== 'All' ? a.eq : ''].filter(Boolean).join(' · ');
   if (terms.length) {
-    const ds = dayState(W.today); const busy = new Set(ds.added);
-    const ids = Object.keys(E).filter(id => !E[id].hidden && !busy.has(id) && terms.every(t => searchText(id).indexOf(t) !== -1)).sort((a,b) => E[a].n.localeCompare(E[b].n)).slice(0, 10);
-    box.innerHTML = ids.length ? ids.map(id => addRow(id, W)).join('') : '<p class="muted" style="font-size:14px;padding:14px 2px">No exercise matches "'+esc(st.add.q)+'". Make it with "Something else" below.</p>';
-  } else {
-    const c = addCandidates(W).slice(0, 3);
-    box.innerHTML = c.length ? '<div class="lbl2">Due this week'+(st.equip !== 'All' ? ' · '+st.equip : '')+'</div>'+c.map(x => addRow(x.id, W)).join('') : '';
+    const ids = Object.keys(E).filter(id => !E[id].hidden && !busy.has(id) && addMatch(id) && terms.every(t => searchText(id).indexOf(t) !== -1)).sort((x,y) => E[x].n.localeCompare(E[y].n)).slice(0, 12);
+    box.innerHTML = ids.length ? '<div class="lbl2">'+ids.length+' match'+(ids.length>1?'es':'')+(where ? ' · '+where : '')+'</div>'+ids.map(id => addRow(id, W)).join('') : '<p class="muted" style="font-size:14px;padding:14px 2px;line-height:1.5">Nothing matches "'+esc(a.q)+'"'+(where ? ' in '+esc(where) : '')+'.'+(where ? ' <button class="linkbtn" style="display:inline;min-height:0;padding:0;font-size:14px" data-a="af-reset">Search everything</button>' : '')+'</p>';
+    return;
   }
+  const due = addCandidates(W);
+  if (a.area === 'All') {
+    box.innerHTML = due.length ? '<div class="lbl2">Due this week'+(where ? ' · '+where : '')+'</div>'+due.slice(0,3).map(x => addRow(x.id, W)).join('') : '<p class="muted" style="font-size:14px;padding:14px 2px">Nothing else is due'+(where ? ' for '+esc(where) : '')+' this week.</p>';
+    return;
+  }
+  const dueIds = new Set(due.map(x => x.id));
+  const rest = Object.keys(E).filter(id => !E[id].hidden && !busy.has(id) && !dueIds.has(id) && addMatch(id)).sort(byPos);
+  box.innerHTML = (due.length ? '<div class="lbl2">Due this week · '+where+'</div>'+due.map(x => addRow(x.id, W)).join('') : '<p class="muted" style="font-size:14px;padding:14px 2px 0">Nothing in '+esc(where)+' is still due this week.</p>')+
+    (rest.length ? '<div class="lbl2">Also in '+esc(a.area)+'</div>'+rest.map(id => addRow(id, W)).join('') : '');
 }
 function renderAdd(){
   const r = document.getElementById('add-root'); if (!st.add) { r.innerHTML = ''; return; }
@@ -857,7 +872,9 @@ function renderAdd(){
   if (a.view === 'list') {
     const total = Object.keys(E).filter(id => !E[id].hidden).length;
     h += '<div class="row-between" style="align-items:center"><span style="font-size:20px;font-weight:600">Add to today</span><button class="back" style="font-size:15px" data-a="add-close">Cancel</button></div>'+
-      '<div class="tsearch" style="margin-top:14px;flex:none"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B819A" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><label for="aq" class="hidden">Search exercises</label><input id="aq" type="search" autocomplete="off" spellcheck="false" placeholder="Search '+total+' exercises" value="'+esc(a.q)+'"></div>'+
+      '<div style="display:flex;gap:8px;margin-top:14px"><div class="tsearch"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B819A" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><label for="aq" class="hidden">Search exercises</label><input id="aq" type="search" autocomplete="off" spellcheck="false" placeholder="Search" value="'+esc(a.q)+'"></div>'+
+      '<div class="seg" role="group" aria-label="Equipment">'+['All','Home','Gym'].map(e => '<button class="'+(a.eq===e?'on':'')+'" aria-pressed="'+(a.eq===e)+'" data-a="af-eq" data-v="'+e+'">'+e+'</button>').join('')+'</div></div>'+
+      '<div class="afilt">'+['All'].concat(AREAS.filter(ar => Object.keys(E).some(id => !E[id].hidden && E[id].a === ar))).concat(Object.keys(E).some(id => !E[id].hidden && E[id].a === 'Other') ? ['Other'] : []).map(ar => '<button class="lc'+(a.area===ar?' on':'')+'" aria-pressed="'+(a.area===ar)+'" data-a="af-area" data-v="'+ar+'">'+ar+'</button>').join('')+'</div>'+
       '<div id="ares"></div>'+
       '<button class="somethingelse" data-a="add-custom"><span class="se-plus">+</span><span style="flex:1;text-align:left"><span style="display:block;font-size:15px;font-weight:600">Something else</span><span class="small muted" style="display:block;margin-top:2px">Log any exercise, e.g. Nordic curl or a run</span></span><span class="muted">›</span></button>';
   } else {
@@ -878,12 +895,17 @@ function renderAdd(){
   r.innerHTML = h;
   if (a.view === 'list') renderAddList();
 }
-function addToday(id){
-  const W = computeWeek(); const ds = dayState(W.today);
-  if (ds.ended) { ds.ended = false; }
+function joinToday(id){
+  const today = dkey(new Date()); const ds = dayState(today);
+  if (curBatchSet().has(id) && !ds.ended) return false;
+  ds.ended = false;
+  if (st.up) { const ch = batchesOf(st.up.ids); const b = Math.min(ds.batch, ch.length); const later = ch.slice(b+1).flat(); if (later.indexOf(id) !== -1) { st.up.ids = st.up.ids.filter(z => z !== id); writeJSON('atg-up', st.up); } }
   if (ds.added.indexOf(id) === -1) ds.added.push(id); ds.ab[id] = ds.batch;
-  const sk = skippedToday(W.today).filter(z => z !== id); writeJSON('atg-skip', {date:W.today, ids:sk});
-  saveDay(ds); closeAdd(); st.swapIn = id; render(); setTimeout(() => { st.swapIn = null; }, 600); toast(E[id].n+' added to today');
+  const sk = skippedToday(today).filter(z => z !== id); writeJSON('atg-skip', {date:today, ids:sk});
+  saveDay(ds); return true;
+}
+function addToday(id){
+  joinToday(id); closeAdd(); st.swapIn = id; render(); setTimeout(() => { st.swapIn = null; }, 600); toast(E[id].n+' added to today');
 }
 
 function sessionsFor(id){
@@ -1200,6 +1222,8 @@ function pbFor(entry, pool){
 
 // ---------- Logging with celebration ----------
 function commitLog(entry, o){
+  // anything logged today shows in today's list
+  if (entry.date === dkey(new Date()) && joinToday(entry.ex)) { st.swapIn = entry.ex; setTimeout(() => { if (st.swapIn === entry.ex) st.swapIn = null; }, 600); }
   const before = computeWeek(); const pb = pbFor(entry, logs);
   logs.push(entry); save(); syncWeeks([weekKey(entry.date)]);
   const after = computeWeek();
@@ -1434,7 +1458,7 @@ function renderSearch(q){
   const recent = []; for (let i = logs.length-1; i >= 0 && recent.length < 5; i--) if (recent.indexOf(logs[i].ex) === -1) recent.push(logs[i].ex);
   const rowHtml = id => {
     const x = W.ex.find(z => z.id === id); const td = W.tdy[id] || 0; const timed = E[id].k === 'time' || E[id].k === 'fail';
-    const meta = esc(T[id].ideal.rx)+' · '+(x.optional ? 'optional' : x.left === 0 ? '<span class="done-c">done this week</span>' : x.left+' left this week')+(td ? ' · '+td+' today' : '');
+    const meta = esc(T[id].ideal.rx)+' · '+(x.optional ? 'optional' : x.left === 0 ? '<span class="done-c">done this week</span>' : x.left+' left this week')+(td ? ' · '+td+' today' : '')+(curBatchSet().has(id) ? ' · <span style="color:var(--soft)">on today\'s list</span>' : '');
     return '<div class="sr"><button class="ico" aria-label="'+esc(E[id].n)+' details" data-a="s-open" data-v="'+id+'">'+icon(id,38)+'</button>'+
       '<button class="sr-main" data-a="s-open" data-v="'+id+'"><span class="sr-name">'+esc(E[id].n)+'</span><span class="xmeta">'+meta+'</span></button>'+
       '<button class="sr-log'+(st.sLogged === id ? ' ok' : '')+'" aria-label="'+(timed ? 'Start timer for ' : 'Log a set of ')+esc(E[id].n)+'" data-a="s-log" data-v="'+id+'">'+
@@ -1507,6 +1531,9 @@ document.addEventListener('click', ev => {
     case 'prev-toggle': st.showPrev = !st.showPrev; render(); break;
     case 'add-open': openAdd(); break;
     case 'add-close': closeAdd(); break;
+    case 'af-area': st.add.area = v; renderAdd(); break;
+    case 'af-eq': st.add.eq = v; renderAdd(); break;
+    case 'af-reset': st.add.area = 'All'; st.add.eq = 'All'; renderAdd(); break;
     case 'add-pick': addToday(v); break;
     case 'add-custom': st.add.view = 'custom'; st.add.err = ''; renderAdd(); setTimeout(() => { const i = document.getElementById('cn'); if (i) i.focus(); }, 50); break;
     case 'add-back': st.add.view = 'list'; renderAdd(); break;
