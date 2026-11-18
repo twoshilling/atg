@@ -303,7 +303,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -492,7 +492,7 @@ const dumbbell = '<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24
 function readJSON(k, d){ try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? v : d; } catch(e){ return d; } }
 function writeJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 const prio = readJSON('atg-prio', {ex:{}, p:{}}); prio.ex = prio.ex || {}; prio.p = prio.p || {};
-function prioOf(id){ if (prio.ex[id] !== undefined) return prio.ex[id]; const ps = Object.keys(T[id].by).map(p => prio.p[p] || 0); return ps.length ? Math.max(...ps) : 0; }
+function prioOf(id){ return 0; } // priorities removed in v1.8
 function prioKey(){ return JSON.stringify(prio); }
 function setPrio(kind, k, v){ if (v === 0 || v === null) delete prio[kind][k]; else prio[kind][k] = v; writeJSON('atg-prio', prio); }
 const equipPref = readJSON('atg-equip', {});
@@ -997,9 +997,6 @@ function viewDetail(W){
   h += '<div class="card section"><span style="font-family:\'Space Grotesk\',sans-serif;font-size:28px;font-weight:700">'+(v.t-v.d)+' </span><span class="muted" style="font-size:14px">sets left to the minimum</span>'+
     '<div class="bar" style="height:10px;margin-top:12px"><i data-k="pd-'+esc(p.id)+'" data-p="width" data-to="'+Math.min(100,v.d/(v.t*1.5)*100).toFixed(1)+'%"></i><b style="left:66.7%;top:-4px;height:18px"></b></div>'+
     '<div class="row-between small" style="margin-top:8px"><span class="muted">'+v.d+' done</span><span style="color:#F7A6CA">Minimum '+v.t+'</span></div></div>';
-  { const cur = prio.p[p.id] || 0;
-    h += '<div class="row-between section" style="align-items:center"><div><div style="font-size:15px;font-weight:600">Priority</div><div class="small muted" style="margin-top:2px">Focus puts its exercises first in your daily workout. Low fits them in only when there\'s time.</div></div></div>'+
-      '<div class="seg" role="group" aria-label="Protocol priority" style="display:grid;grid-template-columns:repeat(3,1fr);margin-top:10px">'+[[1,'Focus'],[0,'Normal'],[-1,'Low']].map(([v2,lab]) => '<button class="'+(cur===v2?'on':'')+'" aria-pressed="'+(cur===v2)+'" data-a="prio-p" data-v="'+esc(p.id)+':'+v2+'">'+lab+'</button>').join('')+'</div>'; }
   h += '<div class="seg section" style="display:grid;grid-template-columns:1fr 1fr" role="group" aria-label="View"><button class="'+(st.dview==='ex'?'on':'')+'" data-a="dview" data-v="ex">By exercise</button><button class="'+(st.dview==='plan'?'on':'')+'" data-a="dview" data-v="plan">As planned</button></div>';
   if (st.dview === 'ex') {
     const rows = p.items.map(([id,w,per,rx]) => { const x = W.ex.find(e => e.id === id);
@@ -1067,9 +1064,6 @@ function renderSheet(){
   h += '<div class="card" style="margin-top:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div class="small muted">Ideal per workout</div><div style="font-size:19px;font-weight:600;margin-top:2px">'+esc(t.ideal.rx)+'</div></div>'+
     '<div style="text-align:right"><div class="small muted">How often</div><div style="font-size:19px;font-weight:600;margin-top:2px">'+(t.ideal.times ? t.ideal.times+'× a week' : 'Optional')+'</div></div></div>'+
     (t.ideal.times ? '<div class="small muted" style="margin-top:6px">Set by '+esc(P.find(q => q.id === t.ideal.prot).name)+(x.tags.length > 1 ? ', which asks the most of this exercise' : '')+'.</div>' : '');
-  { const own = prio.ex[id]; const cur = own === undefined ? 'auto' : String(own); const pl = prioOf(id);
-    h += '<div class="row-between" style="margin-top:12px;align-items:center"><span class="small muted">Priority'+(own === undefined && pl ? ' (from protocol: '+(pl>0?'focus':'low')+')' : '')+'</span>'+
-      '<div class="seg" role="group" aria-label="Priority" style="padding:2px">'+[['1','Focus'],['auto','Normal'],['-1','Low']].map(([v2,lab]) => '<button class="'+(cur===v2?'on':'')+'" style="height:32px;padding:0 11px;font-size:13px" aria-pressed="'+(cur===v2)+'" data-a="prio-ex" data-v="'+id+':'+v2+'">'+lab+'</button>').join('')+'</div></div>'; }
   h += '<div class="grid2" style="margin-top:10px"><div class="card" style="padding:12px 14px"><div class="small muted">This week</div><div style="font-size:19px;font-weight:600;margin-top:2px">'+(x.optional?x.done+' sets':Math.min(x.done,x.target)+' of '+x.target+' sets')+'</div><div class="small muted" style="margin-top:2px">'+(x.optional?'Optional':x.workouts+' of '+x.times+' workouts done')+'</div></div>'+
     '<div class="card" style="padding:12px 14px"><div class="small muted">Last time</div><div style="font-size:19px;font-weight:600;margin-top:2px">'+(l?describe(l):'—')+'</div><div class="small muted" style="margin-top:2px">'+(l?sinceText(daysBetween(l.date,W.today))+(l.effort?' · effort '+l.effort:''):'Not done yet')+'</div></div></div>';
 
