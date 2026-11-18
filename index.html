@@ -163,6 +163,7 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid #2E2740
 .lname{flex:1;min-width:0;font-size:14px;font-weight:500}
 .lchips{display:flex;gap:4px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex-shrink:0;max-width:55%}
 .lchip{min-width:28px;height:24px;padding:0 7px;border-radius:12px;background:#2A2436;color:var(--soft);font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.lchip.ghost{background:none;box-shadow:inset 0 0 0 1.5px #3A3249}
 .lkg{font-size:12px;color:var(--muted);margin-left:4px;white-space:nowrap}
 .logrow{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .logrow .lt{color:var(--muted);font-variant-numeric:tabular-nums;grid-row:span 2}
@@ -297,7 +298,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.6.1';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -1018,7 +1019,8 @@ function viewDetail(W){
 function logChips(ls){
   const e = E[ls[0].ex]; const loads = [...new Set(ls.map(l => l.load||0))];
   const txt = l => e.k === 'time' || e.k === 'fail' ? fmtSecs(l.secs||0) : e.k === 'dist' ? '✓' : String(l.reps||0)+(loads.length > 1 && l.load ? '·'+(Math.round(l.load*10)/10) : '');
-  return '<span class="lchips">'+ls.map(l => '<span class="lchip">'+txt(l)+'</span>').join('')+(loads.length === 1 && loads[0] ? '<span class="lkg">'+kg(loads[0])+'</span>' : loads.length > 1 ? '<span class="lkg">kg</span>' : '')+'</span>';
+  const t = T[ls[0].ex]; const ghosts = t && t.target > 0 ? Math.max(0, (t.ideal.per || 0) - ls.length) : 0;
+  return '<span class="lchips" aria-label="'+ls.length+(ghosts ? ' of '+(ls.length+ghosts) : '')+' sets">'+ls.map(l => '<span class="lchip">'+txt(l)+'</span>').join('')+'<span class="lchip ghost"></span>'.repeat(ghosts)+(loads.length === 1 && loads[0] ? '<span class="lkg">'+kg(loads[0])+'</span>' : loads.length > 1 ? '<span class="lkg">kg</span>' : '')+'</span>';
 }
 function dayTitle(d){ const x = new Date(d+'T12:00:00'); const y = new Date(); y.setDate(y.getDate()-1);
   return d === dkey(new Date()) ? 'Today' : d === dkey(y) ? 'Yesterday' : DAYFULL[(x.getDay()+6)%7]+' '+x.getDate()+' '+MON[x.getMonth()]+(x.getFullYear() !== new Date().getFullYear() ? ' '+x.getFullYear() : ''); }
