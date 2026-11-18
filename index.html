@@ -206,6 +206,11 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 .afilt{display:flex;gap:6px;overflow-x:auto;margin:10px -20px 0;padding:2px 20px 4px;scrollbar-width:none}
 .afilt::-webkit-scrollbar{display:none}
 .afilt .lc{flex-shrink:0}
+.wpC{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.wpC button{flex:1;min-width:0;height:34px;border-radius:10px;border:none;background:#231E2E;color:var(--text);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;font-variant-numeric:tabular-nums}
+.wpC button b{font-size:10px}
+.wpC button.done{color:#7FD1A8}
+.wpC button.sel{background:#F4EFF8;color:#120F18}
 /* v4 */
 .seg button.on,.effort button.on,.sides button.on,.lc.on,.ef.on{background:#F4EFF8;color:#120F18}
 .btn{background:#F4EFF8;color:#120F18}
@@ -298,7 +303,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.7';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -658,6 +663,10 @@ function buildQueue(W, match){
 }
 function batchesOf(ids){ const out = []; for (let i = 0; i < ids.length; i += 3) out.push(ids.slice(i, i+3).sort(byPos)); return out; }
 
+function weekProt(W){
+  return '<div class="wpC">'+P.map(p => { const x = W.prot[p.id]; const left = Math.max(0, x.t - x.d); const sel = st.prot === p.id;
+    return '<button class="'+(sel?'sel':'')+(left?'':' done')+'" aria-pressed="'+sel+'" aria-label="'+esc(p.name)+': '+(left ? left+' sets left' : 'done')+'. Tap to filter" data-a="prot" data-v="'+esc(p.id)+'"><b style="color:'+(sel ? '#120F18' : TAGC[p.id])+'">'+TAGL[p.id]+'</b>'+(left || '✓')+'</button>'; }).join('')+'</div>';
+}
 function viewToday(W){
   const now = new Date(); const ws = weekStart(now);
   const pct = W.target ? Math.round(W.done/W.target*100) : 0;
@@ -670,7 +679,7 @@ function viewToday(W){
     '<div style="position:relative;width:64px;height:64px;flex-shrink:0"><svg role="img" aria-label="'+pct+' percent done" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#2A2436" stroke-width="6"/><circle cx="32" cy="32" r="26" fill="none" stroke="#FFB08A" stroke-width="6" stroke-linecap="round" class="rg" data-k="ring" data-p="strokeDasharray" data-to="'+Math.round(c64*pct/100)+' '+Math.round(c64)+'" transform="rotate(-90 32 32)"/></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">'+pct+'%</span></div></div>'+
     '<div class="dbars">'+DAYN.map((d,i) => { const dd = new Date(ws); dd.setDate(dd.getDate()+i); const k = dkey(dd); const future = i > W.todayIdx; const n = W.perDay[i];
       return '<button class="dbar'+(i===W.todayIdx?' today':'')+'" '+(future?'disabled ':'')+'aria-label="'+DAYN[i]+' '+dd.getDate()+' '+MON[dd.getMonth()]+': '+n+' sets" data-a="day" data-v="'+k+'"><span class="dcol"><i style="height:'+(n ? Math.max(6, Math.round(n/maxDay*34)) : 4)+'px'+(n?'':';background:#2A2436')+'"></i></span>'+d[0]+'</button>'; }).join('')+'</div>'+
-    streakChip()+'</div>';
+    weekProt(W)+streakChip()+'</div>';
   if (!storageOk) h += '<div class="note warn" style="margin-top:16px">This browser isn\'t letting the app save. Sets you log will be lost when you close it.</div>';
   h += wrapCard();
 
@@ -752,15 +761,7 @@ function viewToday(W){
   h += '</div>';
 
   // This week: protocol rings, then everything else grouped by protocol
-  h += '<div class="section"><div class="row-between" style="margin-bottom:12px;align-items:baseline"><h2 style="font-size:18px">This week</h2><span class="small muted">Sets left · tap to filter</span></div><div class="prings">';
-  const rc = 2*Math.PI*20;
-  P.forEach(p => { const v = W.prot[p.id]; const sel = st.prot === p.id; const left = v.t - v.d; const done = left <= 0;
-    h += '<button class="pring'+(sel?' sel':'')+'" aria-pressed="'+sel+'" aria-label="'+esc(p.name)+': '+left+' of '+v.t+' sets left" data-a="prot" data-v="'+esc(p.id)+'">'+
-      '<span class="pr-ring"><svg aria-hidden="true" width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#2A2436" stroke-width="4"/>'+
-      '<circle cx="25" cy="25" r="20" fill="none" stroke="'+(done?'#7FD1A8':'#FFB08A')+'" stroke-width="4" stroke-linecap="round"'+(v.d?'':' opacity="0"')+' class="rg" data-k="pr-'+esc(p.id)+'" data-p="strokeDasharray" data-to="'+(v.d ? Math.max(1, Math.round(rc*Math.min(1, v.d/v.t))) : 0)+' '+Math.round(rc)+'" transform="rotate(-90 25 25)"/></svg>'+
-      '<span class="pr-n">'+(done ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7FD1A8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : left)+'</span></span>'+
-      '<span class="pr-name">'+ptags([p.id])+'</span><span class="pr-sub">'+esc(short(p.id))+'</span></button>'; });
-  h += '</div>';
+  h += '<div class="section"><h2 style="font-size:18px;margin-bottom:4px">Everything else this week</h2>';
   const inToday = new Set(curX.map(x => x.id));
   P.filter(p => !st.prot || p.id === st.prot).forEach(p => {
     const v = W.prot[p.id];
