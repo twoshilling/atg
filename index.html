@@ -216,6 +216,8 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 .addpill{margin-left:auto;align-self:center;height:32px;padding:0 12px;border-radius:16px;border:1.5px solid #3A3249;background:none;color:var(--soft);font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
 .addpill:active{background:#231E2E}
 .newex{display:block;margin:18px auto 0}
+.nudge{display:flex;align-items:center;gap:8px;margin-top:12px;padding:12px 12px 12px 16px;border-radius:16px;background:var(--card);box-shadow:inset 0 0 0 1px #3A3249}
+.nbtn{height:36px;padding:0 16px;border-radius:18px;border:none;background:#F4EFF8;color:#120F18;font-size:14px;font-weight:600}
 /* v4 */
 .seg button.on,.effort button.on,.sides button.on,.lc.on,.ef.on{background:#F4EFF8;color:#120F18}
 .btn{background:#F4EFF8;color:#120F18}
@@ -308,7 +310,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -688,6 +690,7 @@ function viewToday(W){
       return '<button class="dbar'+(i===W.todayIdx?' today':'')+'" '+(future?'disabled ':'')+'aria-label="'+DAYN[i]+' '+dd.getDate()+' '+MON[dd.getMonth()]+': '+n+' sets" data-a="day" data-v="'+k+'"><span class="dcol"><i style="height:'+(n ? Math.max(6, Math.round(n/maxDay*34)) : 4)+'px'+(n?'':';background:#2A2436')+'"></i></span>'+d[0]+'</button>'; }).join('')+'</div>'+
     weekProt(W)+streakChip()+'</div>';
   if (!storageOk) h += '<div class="note warn" style="margin-top:16px">This browser isn\'t letting the app save. Sets you log will be lost when you close it.</div>';
+  h += backupNudge();
   h += wrapCard();
 
   // search and Home/Gym, sticky while you scroll
@@ -1163,6 +1166,7 @@ async function offerFile(name, text, type){
   const out = document.getElementById('export-out');
   if (out) out.innerHTML = '<div class="card stack" style="gap:10px;margin-top:12px"><span class="small muted">If no download started, copy this instead and paste it into Notes or an email.</span><textarea readonly id="exptext">'+esc(text)+'</textarea><button class="btn ghost" data-a="copy">Copy to clipboard</button></div>';
   if (ok) toast('File saved');
+  return ok;
 }
 function restore(text){
   let data; try { data = JSON.parse(text); } catch(e){ toast('That isn\'t a valid backup file'); return; }
@@ -1286,6 +1290,14 @@ function wrapWeekToShow(){
   else if (wd <= 1) { const p = new Date(ws); p.setDate(p.getDate()-7); key = dkey(p); }
   if (!key || flag('wrap-'+key)) return null;
   return logs.some(l => weekKey(l.date) === key) ? key : null;
+}
+function backupNudge(){
+  if (!logs.length) return '';
+  let last = 0, snooze = ''; try { last = +localStorage.getItem('atg-last-backup') || 0; snooze = localStorage.getItem('atg-backup-snooze') || ''; } catch(e){}
+  const ref = last || logs[0].ts; const days = Math.floor((Date.now() - ref) / 86400000);
+  if (days < 5 || snooze === dkey(new Date())) return '';
+  return '<div class="nudge"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">Back up your sets</div><div class="small muted" style="margin-top:2px">'+(last ? 'Last saved '+days+' days ago' : 'Not saved to a file yet')+'</div></div>'+
+    '<button class="linkbtn" style="min-height:36px;padding:0 6px;font-size:13px;color:var(--muted);text-decoration:none" data-a="backup-later">Later</button><button class="nbtn" data-a="backup-now">Save</button></div>';
 }
 function wrapCard(){
   const k = wrapWeekToShow(); if (!k) return '';
@@ -1616,7 +1628,8 @@ document.addEventListener('click', ev => {
     case 'cel-close': document.getElementById('cel-root').innerHTML = ''; break;
     case 'del': { const gone = logs.find(l => l.id === v); logs = logs.filter(l => l.id !== v); save(); if (gone) syncWeeks([weekKey(gone.date)]); } render(); renderSheet(); toast('Set deleted'); break;
     case 'csv': offerFile('atg-sets-'+dkey(new Date())+'.csv', csv(), 'text/csv'); break;
-    case 'backup': offerFile('atg-backup-'+dkey(new Date())+'.json', JSON.stringify({v:1, exported:new Date().toISOString(), logs, loads:loadPref, customs}), 'application/json'); break;
+    case 'backup': case 'backup-now': offerFile('atg-backup-'+dkey(new Date())+'.json', JSON.stringify({v:1, exported:new Date().toISOString(), logs, loads:loadPref, customs}), 'application/json').then(ok => { if (ok) { try { localStorage.setItem('atg-last-backup', String(Date.now())); } catch(e){} render(); } }); break;
+    case 'backup-later': try { localStorage.setItem('atg-backup-snooze', dkey(new Date())); } catch(e){} render(); break;
     case 'copy': { const t = document.getElementById('exptext'); try { navigator.clipboard.writeText(t.value).then(() => toast('Copied'), () => { t.select(); toast('Select all and copy'); }); } catch(e){ t.select(); } break; }
     case 'restore': st.restore = !st.restore; render(); break;
     case 'restore-go': { const t = document.getElementById('rtext'); if (t && t.value.trim()) restore(t.value); else toast('Choose a file or paste a backup first'); break; }
