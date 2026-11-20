@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ATG Tracker">
 <meta name="theme-color" content="#120F18">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>ATG Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -306,7 +308,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.11';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -1642,6 +1644,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
 
 document.getElementById('ver').textContent = 'v'+APP_VERSION;
 load(); if (equipPref[bucket()]) st.equip = equipPref[bucket()]; render(); initCloud();
+
+// Offline: register the service worker on the GitHub-hosted copy only
+if ('serviceWorker' in navigator && /github\.io$/.test(location.hostname)) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
 </script>
 </body>
 </html>
