@@ -303,13 +303,14 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
   warmup:{n:'ATG warm-up (backward walk)',a:'Legs',q:'Home',k:'dist'},
   backext:{n:'Back extension progression',a:'Back',q:'Gym',k:'reps',r:20,l:1},
   hipflex:{n:'Hip flexors',a:'Hips',q:'Home',k:'reps',r:20,l:1},
+  hipair:{n:'Hip airplane, banded (physio)',a:'Hips',q:'Home',k:'reps',r:10,s:1},
   splitsq:{n:'ATG split squat',a:'Legs',q:'Home',k:'reps',r:8,s:1,l:1},
   goodmorn:{n:'Seated goodmorning',a:'Back',q:'Home',k:'reps',r:12,l:1},
   couch:{n:'Couch stretch',a:'Hips',q:'Home',k:'time',t:60,s:1},
@@ -352,8 +353,8 @@ const P = [
   {id:'Hip',name:'Hip',sub:'2× a week minimum',items:[
     ['warmup',2,1,'1 × 100 yards forward and back'],['backext',4,2,'2 × 20'],['hipflex',4,2,'2 × 20'],
     ['splitsq',4,2,'2 × 8/side'],['goodmorn',4,2,'2 × 12'],['couch',4,2,'2 × 1 min/side'],
-    ['pigeon',4,2,'2 × 20'],['butterfly',4,2,'2 × 20'],['hiprot',0,1,'1 × 1 min each side · optional']],
-   plan:[['Each workout (2× a week)',[['warmup','1 × 100 yd'],['backext','2 × 20'],['hipflex','2 × 20'],['splitsq','2 × 8/side'],['goodmorn','2 × 12'],['couch','2 × 1 min/side'],['pigeon','2 × 20'],['butterfly','2 × 20'],['hiprot','1 × 1 min/side (optional)']]]]},
+    ['pigeon',4,2,'2 × 20'],['butterfly',4,2,'2 × 20'],['hiprot',0,1,'1 × 1 min each side · optional'],['hipair',6,2,'2 × 10/side · physio']],
+   plan:[['Each workout (2× a week)',[['warmup','1 × 100 yd'],['backext','2 × 20'],['hipflex','2 × 20'],['splitsq','2 × 8/side'],['goodmorn','2 × 12'],['couch','2 × 1 min/side'],['pigeon','2 × 20'],['butterfly','2 × 20'],['hiprot','1 × 1 min/side (optional)'],['hipair','2 × 10/side']]]]},
   {id:'Groin',name:'Groin',sub:'3-day plan',items:[
     ['sled',3,1,'1 × 10 min · Mon, Wed, Fri'],['pigeon',9,3,'3 × 20/side · Mon, Wed, Fri'],['hipflex',6,3,'3 × 20 · Mon, Fri'],
     ['couchpulse',6,3,'3 × 20/side · Mon, Fri'],['rdl',4,4,'4 × 20 · Wed'],['cph',0,4,'4 × 30s/side · Wed · optional'],
@@ -433,6 +434,7 @@ const ICONS = {
   hang:[32,16.5,'M29 22 H35 M32 22 V39 M32 39 L30 53 M32 39 L34.5 53','M23.5 10.5 L29 22 M40.5 10.5 L35 22','M13 10 H51',1],
   warmup:[34,14,'M33.5 20 L31 34 M33 23 L40 27 L46 27 M31 34 L36 44 L34.5 53.5 L39.5 53.5','M31 34 L24 43.5 L18.5 53','M48 40 H55 M50 45 H56'],
   backext:[49.5,20,'M14 52 L34 36 M43 27 L46 32 L42 33','M34 36 L46 24','M20 54.5 L36.5 40.5 M28 54.5 V47.5'],
+  hipair:[15.5,29,'M21 31 L34.5 34 M34.5 34 L34.5 53.5 M25 32 L24 42','M34.5 34 L50 29.5','M34.5 45 L43 32'],
   hipflex:[32,12,'M32 18 V34 M32 21 L28.5 29 L27.5 34.5 M32 34 L31 44 L31 53.5 L36 53.5','M32 34 L42.5 33 L41.5 43.5 L45 43.5',''],
   goodmorn:[39.5,24.5,'M24 40 L38 42 L39 54 L44 54 M33.5 30 L36 35','M24 40 L36 28','M14 54.5 V42.5 H27 V54.5'],
   pigeon:[31.5,22,'M30 44 L31 28 M31 31 L38 42 L40 51 M30 44 L17 51.5 L6 53','M30 44 L41 49.5 L29 53',''],
