@@ -66,8 +66,8 @@ h2{margin:0;font-size:16px;font-weight:600}
 .stepper .val{flex:1;text-align:center;font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700}
 .stepper .val small{font-size:16px;color:var(--muted);font-weight:500}
 .lbl{font-size:13px;color:var(--muted);margin:16px 0 8px}
-.effort{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.effort button{height:54px;border-radius:14px;border:none;background:var(--card);color:var(--soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.effort{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.effort button{height:46px;border-radius:14px;border:none;background:var(--card);color:var(--soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
 .effort button b{font-size:17px}
 .effort button span{font-size:10px}
 .effort button.on{background:var(--accent);color:var(--accent-ink)}
@@ -218,6 +218,9 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 .newex{display:block;margin:18px auto 0}
 .nudge{display:flex;align-items:center;gap:8px;margin-top:12px;padding:12px 12px 12px 16px;border-radius:16px;background:var(--card);box-shadow:inset 0 0 0 1px #3A3249}
 .nbtn{height:36px;padding:0 16px;border-radius:18px;border:none;background:#F4EFF8;color:#120F18;font-size:14px;font-weight:600}
+.feel{display:flex;gap:6px;align-items:center;width:100%;padding-left:46px}
+.fb{height:34px;padding:0 14px;border-radius:17px;border:none;background:#2E2740;color:var(--soft);font-size:13px;font-weight:600;flex-shrink:0}
+.fb.on{background:#F4EFF8;color:#120F18}
 /* v4 */
 .seg button.on,.effort button.on,.sides button.on,.lc.on,.ef.on{background:#F4EFF8;color:#120F18}
 .btn{background:#F4EFF8;color:#120F18}
@@ -310,7 +313,7 @@ body.resting .app{padding-bottom:calc(env(safe-area-inset-bottom) + 170px)}
 <div id="add-root"></div>
 <script>
 'use strict';
-const APP_VERSION = '1.12';
+const APP_VERSION = '1.13';
 // ---------- Exercise library ----------
 // k: reps | time | fail | dist ; s: per side ; l: track load ; r: default reps ; t: default seconds
 const E = {
@@ -487,6 +490,8 @@ const KEY = 'atg-tracker-v1';
 let logs = [];
 let storageOk = true;
 function load(){ try { const raw = localStorage.getItem(KEY); logs = raw ? JSON.parse(raw).logs || [] : []; } catch(e){ storageOk = false; logs = []; } }
+// v1.13: only Easy/OK/Hard answers you tap count; older 1-5 ratings (mostly auto-filled) are removed
+function clearOldEffort(arr){ const wks = []; arr.forEach(l => { if (l && l.effort !== undefined && !l.rated) { delete l.effort; wks.push(weekKey(l.date)); } }); return wks; }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify({v:1, logs})); } catch(e){ storageOk = false; } }
 
 // ---------- Weight in hand (per exercise, remembered) ----------
@@ -538,7 +543,9 @@ async function initCloud(){
     const have = new Set(remote.map(l => l.id));
     const unsynced = logs.filter(l => !have.has(l.id));
     logs = remote.concat(unsynced).filter(l => l && l.ex && E[l.ex]).sort((a,b) => a.ts-b.ts);
+    const cleaned = clearOldEffort(logs);
     save(); cloud.status = 'cloud'; render(); if (st.sheet) renderSheet();
+    if (cleaned.length) syncWeeks(cleaned);
     if (unsynced.length) syncWeeks(unsynced.map(l => weekKey(l.date)));
   } catch(e){ if (cloud.db) { cloud.status = 'error'; render(); } }
 }
@@ -1053,7 +1060,7 @@ function lastLog(id){ for (let i = logs.length-1; i >= 0; i--) if (logs[i].ex ==
 function openSheet(id){
   const e = E[id]; const l = lastLog(id);
   st.sheet = id;
-  st.form = { reps: l && l.reps ? l.reps : (e.r||0), load: e.l ? curLoad(id) : 0, side: 'Both', effort: l && l.effort ? l.effort : 3,
+  st.form = { reps: l && l.reps ? l.reps : (e.r||0), load: e.l ? curLoad(id) : 0, side: 'Both', effort: 0,
     secs: l && l.secs && e.k==='time' ? l.secs : (e.t||0) };
   stopTimer(); st.timer = null;
   renderSheet();
@@ -1084,7 +1091,7 @@ function renderSheet(){
   if (e.k === 'time' || e.k === 'fail') h += timerHtml();
   if (e.l) h += '<div class="lbl">Weight in hand (optional)</div><div class="stepper"><button aria-label="Less load" data-a="f" data-v="load:-2.5">−</button><div class="val">'+f.load+' <small>kg</small></div><button aria-label="More load" data-a="f" data-v="load:2.5">+</button></div>';
   if (e.s) h += '<div class="lbl">Side</div><div class="sides">'+['Left','Right','Both'].map(s => '<button class="'+(f.side===s?'on':'')+'" aria-pressed="'+(f.side===s)+'" data-a="side" data-v="'+s+'">'+s+'</button>').join('')+'</div>';
-  h += '<div class="lbl">How did it feel?</div><div class="effort">'+[['1','Easy'],['2','Fine'],['3','Work'],['4','Hard'],['5','Max']].map(([n,lab]) => '<button class="'+(f.effort==n?'on':'')+'" aria-pressed="'+(f.effort==n)+'" data-a="effort" data-v="'+n+'"><b>'+n+'</b><span>'+lab+'</span></button>').join('')+'</div>';
+  h += '<div class="lbl">How did it feel?</div><div class="effort">'+FEEL.map(([n,lab]) => '<button class="'+(f.effort==n?'on':'')+'" aria-pressed="'+(f.effort==n)+'" data-a="effort" data-v="'+n+'"><b style="font-size:15px">'+lab+'</b></button>').join('')+'</div><div class="small muted" style="margin-top:6px">Optional. Only answers you tap count.</div>';
   if (t.per && todayN >= t.per) h += '<div class="note warn" style="margin-top:16px">You\'ve done '+todayN+' set'+(todayN>1?'s':'')+' today, a session\'s share. More still counts, but ATG works best spread over the week.</div>';
   h += '<button class="btn" style="margin-top:18px" data-a="log">Log set '+(todayN+1)+' today</button>';
   if (todaysLogs.length) {
@@ -1174,6 +1181,7 @@ function restore(text){
   if (data && Array.isArray(data.customs)) { let n = 0; data.customs.forEach(c => { if (c && c.id && c.n && !customs.some(z => z.id === c.id)) { customs.push(c); n++; } }); if (n) { saveCustoms(); applyCustoms(); buildT(); st.up = null; } }
   if (data && data.loads && typeof data.loads === 'object') Object.keys(data.loads).forEach(k => { if (E[k] && typeof data.loads[k] === 'number') setLoad(k, data.loads[k]); });
   if (!Array.isArray(incoming)) { toast('No sets found in that file'); return; }
+  clearOldEffort(incoming || []);
   const have = new Set(logs.map(l => l.id)); let added = 0;
   const wks = [];
   incoming.forEach(l => { if (l && l.id && l.ex && E[l.ex] && l.date && !have.has(l.id)) { logs.push(l); wks.push(weekKey(l.date)); added++; } });
@@ -1264,7 +1272,7 @@ function commitLog(entry, o){
 }
 function circleLog(id){
   const e = E[id], l = lastLog(id), now = new Date();
-  const entry = {id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), ex:id, ts:now.getTime(), date:dkey(now), effort: l && l.effort ? l.effort : 3};
+  const entry = {id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), ex:id, ts:now.getTime(), date:dkey(now)};
   if (e.k === 'reps') entry.reps = defReps(id);
   if (e.k === 'time' || e.k === 'fail') entry.secs = l && l.secs ? l.secs : (e.t||30);
   if (e.l && curLoad(id)) entry.load = curLoad(id);
@@ -1312,8 +1320,9 @@ function openWrap(k){
   const hit = P.filter(p => protMet(wc, p));
   const bests = {}; wl.forEach(l => { const pb = pbFor(l, logs); if (pb && (!bests[l.ex] || score(l) > score(bests[l.ex].now))) bests[l.ex] = pb; });
   const easier = Object.keys(wc).map(id => {
-    const thisE = wl.filter(l => l.ex === id && l.effort).map(l => l.effort);
-    const prior = logs.filter(l => l.ex === id && l.effort && l.ts < ws.getTime() && l.ts >= ws.getTime() - 28*86400000).map(l => l.effort);
+    if (0) return null;
+    const thisE = wl.filter(l => l.ex === id && l.rated).map(l => l.effort);
+    const prior = logs.filter(l => l.ex === id && l.rated && l.ts < ws.getTime() && l.ts >= ws.getTime() - 28*86400000).map(l => l.effort);
     if (!thisE.length || !prior.length) return null;
     const a = thisE.reduce((x,y)=>x+y,0)/thisE.length, b = prior.reduce((x,y)=>x+y,0)/prior.length;
     return b - a >= 0.5 ? {id, from:b, to:a} : null; }).filter(Boolean);
@@ -1331,7 +1340,7 @@ function openWrap(k){
     return row('<span>'+esc(p.name)+'</span>', protMet(wc,p) ? '<span style="color:var(--good);font-weight:600">Hit ✓</span>' : d+' of '+t); }).join('');
   const bl = Object.values(bests);
   if (bl.length) h += '<div class="lbl" style="margin-top:22px">New bests</div>'+bl.map(b => row(named(b.now.ex), '<span style="color:#F7C873;font-weight:600">'+describe(b.now)+'</span> <span class="small">was '+describe(b.prev)+'</span>')).join('');
-  if (easier.length) h += '<div class="lbl" style="margin-top:22px">Getting easier</div>'+easier.map(x => row(named(x.id), 'effort '+x.from.toFixed(1)+' → '+x.to.toFixed(1))).join('');
+  if (easier.length) h += '<div class="lbl" style="margin-top:22px">Getting easier</div>'+easier.map(x => row(named(x.id), feelLabel(x.from)+' → '+feelLabel(x.to))).join('');
   if (need.length) h += '<div class="lbl" style="margin-top:22px">'+(isCur?'Most behind':'Needed more love')+'</div>'+need.map(x => row(named(x.id), x.d+' of '+x.t)).join('');
   if (!wl.length) h += '<p class="muted" style="font-size:14px;margin-top:18px">Nothing logged that week.</p>';
   h += '</div></div>';
@@ -1389,8 +1398,10 @@ function doSwap(outId, inId){
 
 // ---------- Logged confirmation (no rest timer) ----------
 let confT = null;
-function startRest(logId){ st.rest = {logId}; renderRest(); setTimeout(() => { if (st.pop === logId) st.pop = null; }, 800); clearTimeout(confT); confT = setTimeout(stopRest, 4500); }
+function startRest(logId){ st.rest = {logId}; renderRest(); setTimeout(() => { if (st.pop === logId) st.pop = null; }, 800); clearTimeout(confT); const l = logs.find(z => z.id === logId); const done = l && (computeWeek().tl[l.ex] || []).length >= (T[l.ex].ideal.per || 1); confT = setTimeout(stopRest, done ? 8000 : 3500); }
 function stopRest(){ clearTimeout(confT); st.rest = null; renderRest(); }
+const FEEL = [[2,'Easy'],[3,'OK'],[4,'Hard']];
+const feelLabel = v => v < 2.5 ? 'Easy' : v < 3.5 ? 'OK' : 'Hard';
 function renderRest(){
   const r = document.getElementById('rest-root');
   document.body.classList.toggle('resting', !!st.rest);
@@ -1401,7 +1412,7 @@ function renderRest(){
   r.innerHTML = '<div class="rest" role="status" aria-label="Set logged"><div class="in conf'+(n >= per ? ' full' : '')+'">'+
     '<svg class="tick" aria-hidden="true" width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="15" fill="none" stroke-width="3"/><path d="M10 17.5l4.5 4.5 9.5-10" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
     '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(E[l.ex].n)+' · '+esc(describe(l))+'</div><div class="small muted">'+sub+'</div></div>'+
-    '<div style="display:flex;gap:6px;align-items:center;width:100%;padding-left:46px"><span class="small muted" style="flex:1;white-space:nowrap">Effort</span>'+[1,2,3,4,5].map(k => '<button class="ef'+(l.effort===k?' on':'')+'" aria-pressed="'+(l.effort===k)+'" aria-label="Effort '+k+' of 5" data-a="rest-effort" data-v="'+k+'">'+k+'</button>').join('')+'</div>'+
+    (n >= per ? '<div class="feel"><span class="small" style="flex:1;white-space:nowrap;color:var(--soft)">How did that feel?</span>'+FEEL.map(([k,lab]) => '<button class="fb'+(l.effort===k?' on':'')+'" aria-pressed="'+(l.effort===k)+'" data-a="rest-effort" data-v="'+k+'">'+lab+'</button>').join('')+'</div>' : '')+
     '</div></div>';
 }
 
@@ -1594,7 +1605,7 @@ document.addEventListener('click', ev => {
       if (l.reps <= 0) { logs = logs.filter(z => z.id !== v); toast('Set removed'); if (st.rest && st.rest.logId === v) stopRest(); }
       save(); syncWeeks([weekKey(l.date)]); render(); break; }
     case 'rest-close': stopRest(); break;
-    case 'rest-effort': { const l = st.rest && logs.find(z => z.id === st.rest.logId); if (l) { l.effort = +v; save(); syncWeeks([weekKey(l.date)]); renderRest(); clearTimeout(confT); confT = setTimeout(stopRest, 1100); } break; }
+    case 'rest-effort': { const l = st.rest && logs.find(z => z.id === st.rest.logId); if (l) { l.effort = +v; l.rated = 1; save(); syncWeeks([weekKey(l.date)]); renderRest(); clearTimeout(confT); confT = setTimeout(stopRest, 1100); } break; }
     case 'open': openSheet(v); break;
     case 'close': closeSheet(); break;
     case 'detail': st.detail = v; st.dview = 'ex'; render(); window.scrollTo(0,0); break;
@@ -1606,13 +1617,13 @@ document.addEventListener('click', ev => {
       if (k === 'secs') { st.form.secs = Math.max(5, st.form.secs+step); const n = document.getElementById('tsecs'); if (n) { n.textContent = fmtSecs(st.form.secs); return; } }
       renderSheet(); break; }
     case 'side': st.form.side = v; st.timer = null; renderSheet(); break;
-    case 'effort': st.form.effort = +v; renderSheet(); break;
+    case 'effort': st.form.effort = st.form.effort === +v ? 0 : +v; renderSheet(); break;
     case 'ttoggle': toggleTimer(); break;
     case 'tadj': { const tm = st.timer; if (tm && !tm.done) { tm.target = Math.max(5, tm.target + (+v)); paintTimer(); } break; }
     case 'treset': stopTimer(); st.timer = null; renderSheet(); break;
     case 'log': {
       const id = st.sheet, e = E[id], f = st.form, now = new Date();
-      const entry = {id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), ex:id, ts:now.getTime(), date:dkey(now), effort:f.effort};
+      const entry = {id: now.getTime().toString(36)+Math.random().toString(36).slice(2,6), ex:id, ts:now.getTime(), date:dkey(now)}; if (f.effort) { entry.effort = f.effort; entry.rated = 1; }
       if (e.k === 'reps') entry.reps = f.reps;
       if (e.k === 'time' || e.k === 'fail') entry.secs = f.secs;
       if (e.l && f.load) entry.load = f.load;
@@ -1656,7 +1667,7 @@ document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') return; if
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { render(); if (st.sheet) paintTimer(); } });
 
 document.getElementById('ver').textContent = 'v'+APP_VERSION;
-load(); if (equipPref[bucket()]) st.equip = equipPref[bucket()]; render(); initCloud();
+load(); if (clearOldEffort(logs).length) save(); if (equipPref[bucket()]) st.equip = equipPref[bucket()]; render(); initCloud();
 
 // Offline: register the service worker on the GitHub-hosted copy only
 if ('serviceWorker' in navigator && /github\.io$/.test(location.hostname)) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
